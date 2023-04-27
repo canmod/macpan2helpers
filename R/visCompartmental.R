@@ -5,20 +5,20 @@
 #'
 #' @return A `visNetwork` object
 #'
-#' @example
-#' sir = Compartmental(system.file('starter_models', 'sir', package = 'macpan2'
-#' visCompartmental(sir)))
+#' @examples
+#' sir = Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
+#' visCompartmental(sir)
 visCompartmental <- function(model, label_flows = FALSE){
-  nodes = data.frame(id = sir$labels$state(),
-                     label = sir$labels$state(),
+  nodes = data.frame(id = model$labels$state(),
+                     label = model$labels$state(),
                      shape = "square")
-  edges = sir$flows_expanded()[c("from", "to")]
+  edges = model$flows_expanded()[c("from", "to")]
   if(label_flows) edges = cbind(edges,
-                                label = sir$flows_expanded()[["flow"]])
+                                label = model$flows_expanded()[["flow"]])
 
-  vn = visNetwork(nodes, edges) |>
-    visEdges(arrows = "to") |>
-    visHierarchicalLayout(direction = "LR")
+  vn = visNetwork::visNetwork(nodes, edges) |>
+    visNetwork::visEdges(arrows = "to") |>
+    visNetwork::visHierarchicalLayout(direction = "LR")
 
   return(vn)
 }
