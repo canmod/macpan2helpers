@@ -1,12 +1,20 @@
 Package: macpan2helpers
-Title: What the Package Does (One Line, Title Case)
+Title: `macpan2` Helper Functions
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Authors@R: c(
+  person("Steve Walker", email="swalk@mcmaster.ca", role=c("cre")),
+  person("Ben Bolker", rol="aut"),
+  person("Irena Papst", rol="ctb"),
+  person("Steve Walker", rol="aut"))
+Description: Helper functions for the `macpan2` package.
+License: GPL (>= 3)
+Imports: 
+    macpan2,
+    visNetwork
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
+URL: https://github.com/canmod/macpan2helpers
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
