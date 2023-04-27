@@ -5,8 +5,9 @@
 #'
 #' @return A `visNetwork` object
 #'
+#' @export
 #' @examples
-#' sir = Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
+#' sir = macpan2::Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
 #' visCompartmental(sir)
 visCompartmental <- function(model, label_flows = FALSE){
   nodes = data.frame(id = model$labels$state(),
