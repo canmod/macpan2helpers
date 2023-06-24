@@ -5,3 +5,4 @@
 macpan2helpers.Rproj
 *~
 .DS_Store
+*.log
