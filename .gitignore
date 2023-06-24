@@ -3,3 +3,5 @@
 .RData
 .Ruserdata
 macpan2helpers.Rproj
+*~
+.DS_Store

@@ -1,0 +1,7 @@
+from ,to ,flow  ,type      
+S    ,I  ,foi   ,per_capita
+I    ,R  ,gamma ,per_capita
+D0,S,birth,absolute_inflow
+S    ,D1,mu,per_capita_outflow
+I    ,D2,mu,per_capita_outflow
+R,D3,mu,per_capita_outflow
