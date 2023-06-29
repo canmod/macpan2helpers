@@ -2,7 +2,7 @@
 % Please edit documentation in R/compare.R
 \name{compare_fits}
 \alias{compare_fits}
-\title{Compare fits between deSolve and macpan2}
+\title{Compare fits between \code{deSolve::ode()} and \code{macpan2}}
 \usage{
 compare_fits(
   macpan2_results,
@@ -21,8 +21,17 @@ at last time point)}
 
 \item{tolerance}{tolerance for numerical comparisons (set to 0 for exact comparison)}
 }
+\value{
+a list containing elements
+\itemize{
+\item \code{comb_plot}: combination plot (all variables)
+\item \code{diff_plot}: difference plot
+\item \code{all_equal}: results of \code{all.equal()}
+\item \code{waldo_compare}: results of \code{waldo::compare} (if available)
+}
+}
 \description{
-Compare fits between deSolve and macpan2
+Compare fits between \code{deSolve::ode()} and \code{macpan2}
 }
 \examples{
 if (require("deSolve")) {
@@ -54,5 +63,9 @@ sir_simulator = sir$simulators$tmb(
 )
 macpan2_results = sir_simulator$report() 
 comp <- compare_fits(macpan2_results, deSolve_results)
+print(comp$comb_plot)
+print(comp$diff_plot)
+comp$all_equal
+comp$waldo_compare
 }
 }

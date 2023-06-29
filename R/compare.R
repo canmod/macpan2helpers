@@ -1,6 +1,6 @@
 ## how should this function work? return everything, or pass an option for which plots/comparisons to make?
 ##'
-##' Compare fits between deSolve and macpan2
+##' Compare fits between `deSolve::ode()` and `macpan2`
 ##' @importFrom dplyr select mutate as_tibble across filter summarise group_by
 ##' @importFrom tidyr pivot_longer
 ##' @importFrom ggplot2 ggplot aes geom_line geom_point %+%
@@ -9,6 +9,11 @@
 ##' @param drop_last drop last point? (for reasons I don't yet understand, macpan2 diverges by a little bit
 ##' at last time point)
 ##' @param tolerance  tolerance for numerical comparisons (set to 0 for exact comparison)
+##' @return a list containing elements
+##' * `comb_plot`: combination plot (all variables)
+##' * `diff_plot`: difference plot
+##' * `all_equal`: results of `all.equal()`
+##' * `waldo_compare`: results of `waldo::compare` (if available)
 ##' @examples
 ##' if (require("deSolve")) {
 ##' sirmod <- function(t, y, parameters) {
@@ -39,6 +44,10 @@
 ##' )
 ##' macpan2_results = sir_simulator$report() 
 ##' comp <- compare_fits(macpan2_results, deSolve_results)
+##' print(comp$comb_plot)
+##' print(comp$diff_plot)
+##' comp$all_equal
+##' comp$waldo_compare
 ##' }
 ##' @export
 compare_fits <- function(macpan2_results, deSolve_results,
@@ -80,7 +89,8 @@ compare_fits <- function(macpan2_results, deSolve_results,
     if (requireNamespace("waldo")) {
         wc <- waldo::compare(x1, x2, tolerance = tolerance)
     }
-    list(gg_comb, gg_diff, ae, wc)
+    list(comb_plot = gg_comb, diff_plot = gg_diff, all_equal = ae,
+         waldo_compare = wc)
 }
 
 
