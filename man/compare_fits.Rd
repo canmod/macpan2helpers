@@ -67,5 +67,7 @@ print(comp$comb_plot)
 print(comp$diff_plot)
 comp$all_equal
 comp$waldo_compare
+## test detection of wrong order:
+##   try(compare_fits(deSolve_results, macpan2_results))
 }
 }

@@ -3,7 +3,7 @@
 ##' Compare fits between `deSolve::ode()` and `macpan2`
 ##' @importFrom dplyr select mutate as_tibble across filter summarise group_by
 ##' @importFrom tidyr pivot_longer
-##' @importFrom ggplot2 ggplot aes geom_line geom_point %+%
+##' @importFrom ggplot2 ggplot aes geom_line geom_point %+% labs
 ##' @param macpan2_results results from running \code{report()} on a macpan2 simulator
 ##' @param deSolve_results results from \code{ode(...)} (typically want to use \code{method = "euler"} to match)
 ##' @param drop_last drop last point? (for reasons I don't yet understand, macpan2 diverges by a little bit
@@ -48,15 +48,24 @@
 ##' print(comp$diff_plot)
 ##' comp$all_equal
 ##' comp$waldo_compare
+##' ## test detection of wrong order:
+##' ##   try(compare_fits(deSolve_results, macpan2_results))
 ##' }
 ##' @export
 compare_fits <- function(macpan2_results, deSolve_results,
                          drop_last = TRUE, tolerance = sqrt(.Machine$double.eps)) {
     time <- pkg <- value <- NULL ## NSE visible bindings warnings
+
+    if (inherits(macpan2_results, "ode") || !inherits(deSolve_results, "deSolve")) {
+        stop("macpan2_results should be a (long-format) data frame and ",
+             "deSolve_results should be a (wide-format) matrix/class 'deSolve'; ",
+             "(did you switch the input order?)")
+    }
+    
     ## drop unused columns, convert time to float
     x1 <- (macpan2_results
         |> as_tibble()
-        |> select(-c(matrix, col))
+        |> select(!any_of(c("matrix", "col")))
         |> mutate(across(time, as.numeric))
     )
     ## pivot, drop deSolve attributes
@@ -73,7 +82,8 @@ compare_fits <- function(macpan2_results, deSolve_results,
     x12 <- (list(macpan = x1, deSolve = x2)
         |> dplyr::bind_rows(.id = "pkg")
     )
-    ## find differences
+    ## find differences:
+    ##  assume (?) macpan-first order remains, so diff is ode-macpan
     xdiff <- (x12
         |> group_by(time, row)
         |> summarise(value = diff(value), .groups = "drop")
@@ -82,7 +92,8 @@ compare_fits <- function(macpan2_results, deSolve_results,
     gg0 <- ggplot(x12, aes(time, value, colour = row)) 
     gg_comb <- gg0 + geom_line(aes(linetype = pkg))
     ## plot diffs
-    gg_diff <- gg0 %+% xdiff + geom_line()
+    gg_diff <- gg0 %+% xdiff + geom_line() +
+        labs(y = "deSolve - macpan")
     ## compare (do we need both?
     ae <- all.equal(x1, x2, tolerance = tolerance)
     wc <- NULL
