@@ -4,12 +4,14 @@
 \alias{visCompartmental}
 \title{Visualize a Compartmental model}
 \usage{
-visCompartmental(model, label_flows = FALSE)
+visCompartmental(model, label_flows = FALSE, ...)
 }
 \arguments{
 \item{model}{Model object created using \code{\link[macpan2:Compartmental]{macpan2::Compartmental()}}}
 
 \item{label_flows}{Logical. Should edges be labelled with flow rates?}
+
+\item{...}{Additional arguments to pass to \code{\link{visNetwork}}}
 }
 \value{
 A \code{visNetwork} object
