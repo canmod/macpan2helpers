@@ -8,7 +8,7 @@
 #'
 #' @export
 #' @examples
-#' sir = macpan2::Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
+#' sir <- macpan2::Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
 #' visCompartmental(sir)
 visCompartmental <- function(model, label_flows = FALSE, ...){
   nodes = node_data(model)

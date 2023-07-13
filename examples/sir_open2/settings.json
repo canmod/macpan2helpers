@@ -1,0 +1,6 @@
+{
+  "required_partitions" : ["Epi"],
+  "null_partition" : "Null",
+    "state_variables" : ["S", "I", "R", "D0", "D1", "D2", "D3"],
+  "flow_variables" : ["foi", "gamma", "birth", "mu"]
+}
