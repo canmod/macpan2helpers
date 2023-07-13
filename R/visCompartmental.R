@@ -13,7 +13,8 @@
 visCompartmental <- function(model, label_flows = FALSE, ...){
   nodes = node_data(model)
   edges = edge_data(model, label_flows = label_flows)
-  vn = vis_obj(nodes, edges, label_flows = label_flows, ...)
+  vn = vis_obj(nodes, edges, label_flows = label_flows, ...) |>
+    visNetwork::visHierarchicalLayout(direction = "LR")
   return(vn)
 }
 
@@ -38,6 +39,5 @@ edge_data = function(model, label_flows = FALSE) {
 
 vis_obj = function(nodes, edges, ...) {
   visNetwork::visNetwork(nodes, edges, ...) |>
-    visNetwork::visEdges(arrows = "to") #|>
-    #visNetwork::visHierarchicalLayout(direction = "LR")
+    visNetwork::visEdges(arrows = "to")
 }
