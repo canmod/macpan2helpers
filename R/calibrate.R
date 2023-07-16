@@ -1,31 +1,22 @@
-## taken from glmmTMB
-replaceForm <- function(term,target,repl) {
-    if (identical(term,target)) return(repl)
-    if (!inForm(term,target)) return(term)
-    if (length(term) == 2) {
-        return(substitute(OP(x),list(OP=replaceForm(term[[1]],target,repl),
-                                     x=replaceForm(term[[2]],target,repl))))
-    }
-    return(substitute(OP(x,y),list(OP=replaceForm(term[[1]],target,repl),
-                                   x=replaceForm(term[[2]],target,repl),
-                                   y=replaceForm(term[[3]],target,repl))))
-}
-
-## better way to do this?
-mk_symb <- function(txt) {
-    parse(text=txt)[[1]]
-}
-
-add_slot <- function(x) {
-    args <- list(empty_matrix, .mats_to_save = x, .mats_to_return = x)
+add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
+    args <- list()
+    if (save_x) args <- c(args, list(.mats_to_save = x))
+    if (return_x) args <- c(args, list(.mats_to_return = x))
+    args <- c(list(empty_matrix), args)
     names(args)[1] <- x
     do.call(sim$add$matrices, args)
 }
 
 
+##' add calibration information to a simulatore
+##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
+##' @param data a list-like object (list or data frame) containing data to add
+##' @param exprs a list of expressions to add
+## wishlist
+## \itemize
 #' @examples
 #' m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
-#' sim <- sir$simulators$tmb(
+#' sim <- m$simulators$tmb(
 #'  time_steps = 100,
 #'  state = c(S = 99, I = 1, R = 0),
 #'  flow = c(foi = NA, gamma = 0.1),
@@ -34,15 +25,23 @@ add_slot <- function(x) {
 #'  )
 #' ## mk_calibrate(sim, list(I_obs = rep(0, 100)))
 mk_calibrate <- function(sim,
+                         params = list(),
+                         transforms = NULL,
                          data = list(),
                          exprs = list(log_lik ~ dnorm(I_obs, I, I_d))) {
-    exprs = list(log_lik ~ dnorm(I_obs, I, I_d))
-    ## how do I get state names?? these are present in 'Compartmental' objects;
+    ## for testing!
+    data = list(I_obs = rnorm(100))
+    exprs = list(log_lik ~ dnorm(I_obs, I, I_sd))
+    ## is there a better/easier way to get state names??
+    ##  these are present in 'Compartmental' objects;
     ## easy to get with sim$labels$state().  Should they be carried along
     ## somehow?
     state_vars <- rownames(sim$print$model$data_arg()$mats[[1]])
     add_slot("log_lik")
     added_vars <- character(0)
+    for (nm in seq(names(data))) {
+        do.call(sir_simulator$add$matrices, data[nm])
+    }
     for (i in seq_along(exprs)) {
         ee <- exprs[[i]]
         all_vars <- all.vars(ee)
@@ -56,20 +55,20 @@ mk_calibrate <- function(sim,
                            .at = Inf)
             bind_var <- sprintf("rbind_time(%s)", ph)
             exprs[[i]] <- do.call(substitute,
-                                  list(ee, setNames(list(mk_symb(bind_var)), v)))
+                                  list(ee, setNames(list(as.name(bind_var)), v)))
                                  
         }
+        ## add remaining required variables
         for (v in setdiff(all_vars, c(added_vars, state_vars))) {
             add_slot(ph)
         }
     }
-}
-    
-    
-        
+    sim$replace$obj_fn(~ -sum(log_lik))
+    ## add transformations
+    ## add parameters
+    ## for now, assume all parameters are scalar?
 
-
-    
 }
+
     
     
