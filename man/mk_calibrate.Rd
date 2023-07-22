@@ -9,7 +9,8 @@ mk_calibrate(
   params = list(),
   transforms = list(),
   data = list(),
-  exprs = list()
+  exprs = list(),
+  debug = FALSE
 )
 }
 \arguments{
@@ -25,18 +26,35 @@ mk_calibrate(
 add calibration information to a simulatore
 }
 \examples{
-m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
-sim <- m$simulators$tmb(
- time_steps = 100,
- state = c(S = 99, I = 1, R = 0),
- flow = c(foi = NA, gamma = 0.1),
- beta = 0.2,
- N = empty_matrix
+## it's convenient to have a function that sets up a fresh simulation
+## (since adding already-existing components to a simulation object throws an error)
+setup_sim <- function() {
+  m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
+  sim <- m$simulators$tmb(
+   time_steps = 100,
+   state = c(S = 99, I = 1, R = 0),
+   flow = c(foi = NA, gamma = 0.1),
+   beta = 0.2,
+   N = empty_matrix
  )
+}
+sim <- setup_sim()
 mk_calibrate(sim,
     data = list(I_obs = rep(0, 100)),
     params = list(beta = 0.2, I_sd = 1),
-    transforms = list(beta = "Log", I_sd = "Log"),
-    exprs = list(log_lik ~ dnorm(I_obs, I, I_sd))
+    transforms = list(beta = "log", I_sd = "log"),
+    exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
+    debug = TRUE
 )
+## failing
+try(sim$report(c(0,0)))
+sim <- setup_sim()
+mk_calibrate(sim,
+    data = list(I_obs = rep(0, 100)),
+    params = list(beta = 0.2, gamma = 0.05),
+    transforms = list(beta = "log", gamma = "log"),
+    exprs = list(log_lik ~ dpois(I_obs, I)),
+    debug = TRUE
+)
+try(sim$report(c(0,0))) ## same failure
 }
