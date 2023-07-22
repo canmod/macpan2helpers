@@ -7,6 +7,11 @@ add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
     do.call(sim$add$matrices, args)
 }
 
+## Note: example is failing with bf1de7f99
+## with: Error in valid$consistency_params_mats$check(self$model) : 
+## optimization parameters are not consistent with matrices
+## but validity could not be checked because:
+## Error in if (any(!valid_pars)) { : missing value where TRUE/FALSE needed
 
 ##' add calibration information to a simulatore
 ##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
@@ -26,14 +31,16 @@ add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
 #' mk_calibrate(sim,
 #'     data = list(I_obs = rep(0, 100)),
 #'     params = list(beta = 0.2, I_sd = 1),
-#'     transforms = list(beta = "Log", I_sd = "Log"),
-#'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd))
+#'     transforms = list(beta = "log", I_sd = "log"),
+#'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
+#'     debug = TRUE
 #' )
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
                          data = list(),
-                         exprs = list()) {
+                         exprs = list(),
+                         debug = FALSE) {
     ## how do I get these programmatically from sim?
     ## is there a better/easier way to get state names??
     ##  these are present in 'Compartmental' objects;
@@ -47,21 +54,23 @@ mk_calibrate <- function(sim,
     
     ## for testing!
 
-
-    cap <- function(s) paste(toupper(substring(s, 1, 1)), substring(s, 2))
+    cap <- function(s) paste0(toupper(substring(s, 1, 1)), substring(s, 2))
     
     ## add log-likelihood slot
+    if (debug) cat("add log_lik matrix (empty)\n")
     add_slot("log_lik")
     ## added_vars <- character(0)
 
     ## add data
     for (nm in names(data)) {
+        if (debug) cat(sprintf("add %s data matrix\n", nm))
         do.call(sim$add$matrices, data[nm])
     }
 
     ## ?? needs to go before expressions get added?
     for (p in setdiff(names(params), sim_params)) {
         ## add params if not already in model
+        if (debug) cat("add param ", p, "\n")
         add_slot(p)
     }
 
@@ -69,42 +78,53 @@ mk_calibrate <- function(sim,
     ## substitute rbind_time(*_sim) in expressions
     for (i in seq_along(exprs)) {
         ee <- exprs[[i]]
+        if (debug) cat("expression: ", deparse(ee), "\n")
         all_vars <- all.vars(ee)
         ## create a placeholder 
         for (v in intersect(all_vars, state_vars)) {
             ph <- paste0(v, "_sim")
+            if (debug) cat("add (empty matrix): ", ph, "\n")
             add_slot(ph)
+            newexpr <- reformulate(v, response = ph)
+            if (debug) cat("add ", deparse(newexpr), "\n")
             sim$insert$expressions(
-                           reformulate(v, response = ph),
+                           newexpr,
                            .phase = "during",
                            .at = Inf)
             bind_var <- sprintf("rbind_time(%s)", ph)
+            ## convert to parsed expression, then get rid of expression()
+            newsym <- parse(text=bind_var)[[1]]
             exprs[[i]] <- do.call(substitute,
-                                  list(ee, setNames(list(as.name(bind_var)), v)))
+                                  list(ee, setNames(list(newsym), v)))
         }
-        sim$insert$expressions(ee, .phase = "after")
+        if (debug) cat("add ", deparse(exprs[[i]]), "\n")
+        sim$insert$expressions(exprs[[i]], .phase = "after")
     }
 
     ## modify names for transforms, apply transform to specified values
     trpars <- transforms != ""
     trp <- params[trpars]
     names(trp) <- paste(transforms[trpars], names(trp), sep = "_")
-    trp <- Map(function(x, tr) get(tolower(tr))(x), trp, transforms[trpars])
-    pframe <- data.frame(mat = names(trp), row = 0, col = 0, default = trp)
+    ## trp <- Map(function(x, tr) get(tolower(tr))(x), trp, transforms[trpars])
+    pframe <- data.frame(mat = names(trp), row = 0, col = 0, default = unlist(trp))
+    rownames(pframe) <- NULL ## cosmetic
+    
+    if (debug) {
+        cat("param_frame:\n")
+        print(pframe)
+    }
+
+    if (debug) cat("adding transformations\n")
+    add_trans <- function(tr, nm) sim$add$transformations(get(cap(tr))(nm))
+    browser()
+    ## add transformations
+    Map(add_trans, transforms[trpars], names(params)[trpars])
+
     sim$replace$params_frame(pframe)
 
-    ## add transformations
-    Map(function(tr, nm) sim$add$transformations(get(cap(tr))(nm)),
-        transforms[trpars], names(params)[trpars])
-
-    
     sim$replace$obj_fn(~ -sum(log_lik))
     ## add transformations
     ## add parameters
     ## for now, assume all parameters are scalar?
 
 }
-
-    
-    
-1
