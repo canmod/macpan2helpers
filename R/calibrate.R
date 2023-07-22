@@ -24,11 +24,11 @@ add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
 #'  N = empty_matrix
 #'  )
 #' mk_calibrate(sim,
-#'     data = list(I_obs = rep(0, 100),
+#'     data = list(I_obs = rep(0, 100)),
 #'     params = list(beta = 0.2, I_sd = 1),
 #'     transforms = list(beta = "Log", I_sd = "Log"),
-#'     exprs = list(log_lik ~ dnorm(I_obs, I, I_d))
-#' ))
+#'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd))
+#' )
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
@@ -56,7 +56,13 @@ mk_calibrate <- function(sim,
 
     ## add data
     for (nm in names(data)) {
-        do.call(sir_simulator$add$matrices, data[nm])
+        do.call(sim$add$matrices, data[nm])
+    }
+
+    ## ?? needs to go before expressions get added?
+    for (p in setdiff(names(params), sim_params)) {
+        ## add params if not already in model
+        add_slot(p)
     }
 
     ## add _sim analogues for state variables referred to in expressions;
@@ -79,13 +85,9 @@ mk_calibrate <- function(sim,
         sim$insert$expressions(ee, .phase = "after")
     }
 
-    for (p in setdiff(names(params), sim_params)) {
-        ## add params if not already in model
-        add_slot(p)
-    }
     ## modify names for transforms, apply transform to specified values
     trpars <- transforms != ""
-    trp <- p[trpars]
+    trp <- params[trpars]
     names(trp) <- paste(transforms[trpars], names(trp), sep = "_")
     trp <- Map(function(x, tr) get(tolower(tr))(x), trp, transforms[trpars])
     pframe <- data.frame(mat = names(trp), row = 0, col = 0, default = trp)
@@ -93,7 +95,7 @@ mk_calibrate <- function(sim,
 
     ## add transformations
     Map(function(tr, nm) sim$add$transformations(get(cap(tr))(nm)),
-        transforms[trpars], names[trpars])
+        transforms[trpars], names(params)[trpars])
 
     
     sim$replace$obj_fn(~ -sum(log_lik))
