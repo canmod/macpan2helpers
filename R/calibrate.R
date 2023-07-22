@@ -1,8 +1,8 @@
-add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
+add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) {
     args <- list()
     if (save_x) args <- c(args, list(.mats_to_save = x))
     if (return_x) args <- c(args, list(.mats_to_return = x))
-    args <- c(list(empty_matrix), args)
+    args <- c(list(value), args)
     names(args)[1] <- x
     do.call(sim$add$matrices, args)
 }
@@ -20,14 +20,19 @@ add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
 ##' @param params a list of parameters with default/starting values
 ##' @export
 #' @examples
-#' m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
-#' sim <- m$simulators$tmb(
-#'  time_steps = 100,
-#'  state = c(S = 99, I = 1, R = 0),
-#'  flow = c(foi = NA, gamma = 0.1),
-#'  beta = 0.2,
-#'  N = empty_matrix
+#' ## it's convenient to have a function that sets up a fresh simulation
+#' ## (since adding already-existing components to a simulation object throws an error)
+#' setup_sim <- function() {
+#'   m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
+#'   sim <- m$simulators$tmb(
+#'    time_steps = 100,
+#'    state = c(S = 99, I = 1, R = 0),
+#'    flow = c(foi = NA, gamma = 0.1),
+#'    beta = 0.2,
+#'    N = empty_matrix
 #'  )
+#' }
+#' sim <- setup_sim()
 #' mk_calibrate(sim,
 #'     data = list(I_obs = rep(0, 100)),
 #'     params = list(beta = 0.2, I_sd = 1),
@@ -35,6 +40,17 @@ add_slot <- function(x, save_x = FALSE, return_x = FALSE) {
 #'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
 #'     debug = TRUE
 #' )
+#' ## failing
+#' try(sim$report(c(0,0)))
+#' sim <- setup_sim()
+#' mk_calibrate(sim,
+#'     data = list(I_obs = rep(0, 100)),
+#'     params = list(beta = 0.2, gamma = 0.05),
+#'     transforms = list(beta = "log", gamma = "log"),
+#'     exprs = list(log_lik ~ dpois(I_obs, I)),
+#'     debug = TRUE
+#' )
+#' try(sim$report(c(0,0))) ## same failure
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
@@ -63,22 +79,22 @@ mk_calibrate <- function(sim,
 
     ## add data
     for (nm in names(data)) {
-        if (debug) cat(sprintf("add %s data matrix\n", nm))
+        if (debug) cat(sprintf("add data matrix: %s\n", nm))
         do.call(sim$add$matrices, data[nm])
     }
 
     ## ?? needs to go before expressions get added?
     for (p in setdiff(names(params), sim_params)) {
         ## add params if not already in model
-        if (debug) cat("add param ", p, "\n")
-        add_slot(p)
+        if (debug) cat("add param (scalar placeholder value): ", p, "\n")
+        add_slot(p, 1.0)
     }
 
     ## add _sim analogues for state variables referred to in expressions;
     ## substitute rbind_time(*_sim) in expressions
     for (i in seq_along(exprs)) {
         ee <- exprs[[i]]
-        if (debug) cat("expression: ", deparse(ee), "\n")
+        if (debug) cat("process expression: ", deparse(ee), "\n")
         all_vars <- all.vars(ee)
         ## create a placeholder 
         for (v in intersect(all_vars, state_vars)) {
@@ -115,16 +131,24 @@ mk_calibrate <- function(sim,
     }
 
     if (debug) cat("adding transformations\n")
-    add_trans <- function(tr, nm) sim$add$transformations(get(cap(tr))(nm))
-    browser()
+    add_trans <- function(tr, nm) {
+        if (debug) cat("add transformation: ", cap(tr)," ", nm, "\n")
+        sim$add$transformations(get(cap(tr))(nm))
+    }
+
     ## add transformations
     Map(add_trans, transforms[trpars], names(params)[trpars])
 
+    ## now add param frame (does order matter??)
     sim$replace$params_frame(pframe)
 
+    if (debug) cat("set obj_fn to -sum(log_lik)\n")
     sim$replace$obj_fn(~ -sum(log_lik))
     ## add transformations
     ## add parameters
     ## for now, assume all parameters are scalar?
+
+    ## everything is done as a side effect (mutating state of sim)
+    return(NULL)
 
 }
