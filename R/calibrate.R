@@ -4,7 +4,7 @@ add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) 
     if (return_x) args <- c(args, list(.mats_to_return = x))
     args <- c(list(value), args)
     names(args)[1] <- x
-    do.call(sim$add$matrices, args)
+    do.call(x$add$matrices, args)
 }
 
 ## Note: example is failing with bf1de7f99
