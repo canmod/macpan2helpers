@@ -8,7 +8,7 @@ add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) 
 }
 
 ## Note: example is failing with bf1de7f99
-## with: Error in valid$consistency_params_mats$check(self$model) : 
+## with: Error in valid$consistency_params_mats$check(self$model) :
 ## optimization parameters are not consistent with matrices
 ## but validity could not be checked because:
 ## Error in if (any(!valid_pars)) { : missing value where TRUE/FALSE needed
@@ -67,11 +67,11 @@ mk_calibrate <- function(sim,
     state_vars <- rownames(sim$print$model$data_arg()$mats[[1]])
 
     logit <- plogis  ## ugh; better way to handle transformations?
-    
+
     ## for testing!
 
     cap <- function(s) paste0(toupper(substring(s, 1, 1)), substring(s, 2))
-    
+
     ## add log-likelihood slot
     if (debug) cat("add log_lik matrix (empty)\n")
     add_slot("log_lik")
@@ -96,11 +96,11 @@ mk_calibrate <- function(sim,
         ee <- exprs[[i]]
         if (debug) cat("process expression: ", deparse(ee), "\n")
         all_vars <- all.vars(ee)
-        ## create a placeholder 
+        ## create a placeholder
         for (v in intersect(all_vars, state_vars)) {
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
-            add_slot(ph)
+            add_slot(ph, save_x = TRUE)
             newexpr <- reformulate(v, response = ph)
             if (debug) cat("add ", deparse(newexpr), "\n")
             sim$insert$expressions(
@@ -124,7 +124,7 @@ mk_calibrate <- function(sim,
     ## trp <- Map(function(x, tr) get(tolower(tr))(x), trp, transforms[trpars])
     pframe <- data.frame(mat = names(trp), row = 0, col = 0, default = unlist(trp))
     rownames(pframe) <- NULL ## cosmetic
-    
+
     if (debug) {
         cat("param_frame:\n")
         print(pframe)
