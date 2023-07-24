@@ -8,7 +8,7 @@ mk_calibrate(
   sim,
   params = list(),
   transforms = list(),
-  data = list(),
+  data = NULL,
   exprs = list(),
   debug = FALSE
 )
@@ -18,7 +18,7 @@ mk_calibrate(
 
 \item{params}{a list of parameters with default/starting values}
 
-\item{data}{a list-like object (list or data frame) containing data to add}
+\item{data}{a data frame containing data to add (i.e., observed variables that will be compared with simulations)}
 
 \item{exprs}{a list of expressions to add}
 }
@@ -40,32 +40,31 @@ setup_sim <- function() {
  )
 }
 sim <- setup_sim()
-## if (require(outbreaks)) {
-##     I_obs <- influenza_england_1978_school[["in_bed"]]
-##     sim$ad_fun()$env$data$time_steps <- length(I_obs)
-## } else {
+if (require(outbreaks)) {
+     I_obs <- influenza_england_1978_school[["in_bed"]]
+} else {
   set.seed(101)
   I_obs <- (sim$report(.phases = "during")
      |> filter(row == "I")
     |> mutate(obs = rnbinom(100, mu = value, size = 2))
     |> pull(obs)
   )
-## }
+}
 mk_calibrate(sim,
-    data = list(I_obs = I_obs),
+    data = data.frame(I_obs),
     params = list(beta = 0.2, I_sd = 1),
     transforms = list(beta = "log", I_sd = "log"),
     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
     debug = TRUE
 )
 sim$optimize$nlminb()
-sim <- setup_sim()
+sim <- setup_sim()  ## refresh
 mk_calibrate(sim,
-    data = list(I_obs = rep(0, 100)),
+    data = data.frame(I_obs),
     params = list(beta = 0.2, gamma = 0.05),
     transforms = list(beta = "log", gamma = "log"),
     exprs = list(log_lik ~ dpois(I_obs, I)),
 )
-## not yet: gives NaN function eval warnings, singular convergence
-# sim$optimize$nlminb()
+sim$optimize$nlminb()
+## warning about NA/NaN function evaluation is probably harmless ...
 }

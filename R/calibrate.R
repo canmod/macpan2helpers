@@ -15,7 +15,7 @@ add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) 
 
 ##' add calibration information to a simulatore
 ##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
-##' @param data a list-like object (list or data frame) containing data to add
+##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations)
 ##' @param exprs a list of expressions to add
 ##' @param params a list of parameters with default/starting values
 ##' @export
@@ -34,38 +34,41 @@ add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) 
 #'  )
 #' }
 #' sim <- setup_sim()
-#' ## if (require(outbreaks)) {
-#' ##     I_obs <- influenza_england_1978_school[["in_bed"]]
-#' ##     sim$ad_fun()$env$data$time_steps <- length(I_obs)
-#' ## } else {
+#' if (require(outbreaks)) {
+#'      I_obs <- influenza_england_1978_school[["in_bed"]]
+#' } else {
 #'   set.seed(101)
 #'   I_obs <- (sim$report(.phases = "during")
 #'      |> filter(row == "I")
 #'     |> mutate(obs = rnbinom(100, mu = value, size = 2))
 #'     |> pull(obs)
 #'   )
-#' ## }
+#' }
 #' mk_calibrate(sim,
-#'     data = list(I_obs = I_obs),
+#'     data = data.frame(I_obs),
 #'     params = list(beta = 0.2, I_sd = 1),
 #'     transforms = list(beta = "log", I_sd = "log"),
 #'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
 #'     debug = TRUE
 #' )
 #' sim$optimize$nlminb()
-#' sim <- setup_sim()
+#' sim <- setup_sim()  ## refresh
 #' mk_calibrate(sim,
-#'     data = list(I_obs = rep(0, 100)),
+#'     data = data.frame(I_obs),
 #'     params = list(beta = 0.2, gamma = 0.05),
 #'     transforms = list(beta = "log", gamma = "log"),
 #'     exprs = list(log_lik ~ dpois(I_obs, I)),
 #' )
-#' ## not yet: gives NaN function eval warnings, singular convergence
-#' # sim$optimize$nlminb()
+#' sim$optimize$nlminb()
+#' ## warning about NA/NaN function evaluation is probably harmless ...
+## FIXME: * allow data as list? possible different lengths?
+## * option to print and/or return the exact sequence of calls?
+## * see hacks for getting simulation variables, state variables
+## * modularize?
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
-                         data = list(),
+                         data = NULL,
                          exprs = list(),
                          debug = FALSE) {
     ## how do I get these programmatically from sim?
@@ -74,7 +77,7 @@ mk_calibrate <- function(sim,
     ## easy to get with sim$labels$state().  Should they be carried along
     ## somehow?
 
-    sim_params <- c("beta", "gamma")
+    sim_vars <- c("beta", "gamma")
     state_vars <- rownames(sim$print$model$data_arg()$mats[[1]])
 
     logit <- plogis  ## ugh; better way to handle transformations?
@@ -89,13 +92,23 @@ mk_calibrate <- function(sim,
     ## added_vars <- character(0)
 
     ## add data
-    for (nm in names(data)) {
-        if (debug) cat(sprintf("add data matrix: %s\n", nm))
-        do.call(sim$add$matrices, data[nm])
+    if (!is.null(data)) {
+        if (!is.data.frame(data)) stop("'data' argument must be a data frame")
+        ## FIXME: better accessor??
+        cur_ts <- sim$ad_fun()$env$data$time_steps
+        if (nrow(data) != cur_ts) {
+            if (debug) cat(sprintf("resetting number of time steps (%d -> %d)\n",
+                                   cur_ts, nrow(data)))
+            sim$replace$time_steps(nrow(data))
+        }
+        for (nm in names(data)) {
+            if (debug) cat(sprintf("add data matrix: %s\n", nm))
+            do.call(sim$add$matrices, data[nm])
+        }
     }
 
     ## ?? needs to go before expressions get added?
-    for (p in setdiff(names(params), sim_params)) {
+    for (p in setdiff(names(params), sim_vars)) {
         ## add params if not already in model
         if (debug) cat("add param (scalar placeholder value): ", p, "\n")
         add_slot(p, 1.0)
