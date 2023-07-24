@@ -28,6 +28,7 @@ add calibration information to a simulatore
 \examples{
 ## it's convenient to have a function that sets up a fresh simulation
 ## (since adding already-existing components to a simulation object throws an error)
+library(dplyr)
 setup_sim <- function() {
   m <- Compartmental(system.file("starter_models", "sir", package = "macpan2"))
   sim <- m$simulators$tmb(
@@ -39,22 +40,32 @@ setup_sim <- function() {
  )
 }
 sim <- setup_sim()
+## if (require(outbreaks)) {
+##     I_obs <- influenza_england_1978_school[["in_bed"]]
+##     sim$ad_fun()$env$data$time_steps <- length(I_obs)
+## } else {
+  set.seed(101)
+  I_obs <- (sim$report(.phases = "during")
+     |> filter(row == "I")
+    |> mutate(obs = rnbinom(100, mu = value, size = 2))
+    |> pull(obs)
+  )
+## }
 mk_calibrate(sim,
-    data = list(I_obs = rep(0, 100)),
+    data = list(I_obs = I_obs),
     params = list(beta = 0.2, I_sd = 1),
     transforms = list(beta = "log", I_sd = "log"),
     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
     debug = TRUE
 )
-## failing
-try(sim$report(c(0,0)))
+sim$optimize$nlminb()
 sim <- setup_sim()
 mk_calibrate(sim,
     data = list(I_obs = rep(0, 100)),
     params = list(beta = 0.2, gamma = 0.05),
     transforms = list(beta = "log", gamma = "log"),
     exprs = list(log_lik ~ dpois(I_obs, I)),
-    debug = TRUE
 )
-try(sim$report(c(0,0))) ## same failure
+## not yet: gives NaN function eval warnings, singular convergence
+# sim$optimize$nlminb()
 }
