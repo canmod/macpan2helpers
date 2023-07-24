@@ -1,10 +1,10 @@
-add_slot <- function(x, value = empty_matrix, save_x = FALSE, return_x = FALSE) {
+add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FALSE) {
     args <- list()
     if (save_x) args <- c(args, list(.mats_to_save = x))
     if (return_x) args <- c(args, list(.mats_to_return = x))
     args <- c(list(value), args)
     names(args)[1] <- x
-    do.call(x$add$matrices, args)
+    do.call(sim$add$matrices, args)
 }
 
 ## Note: example is failing with bf1de7f99
@@ -88,7 +88,7 @@ mk_calibrate <- function(sim,
 
     ## add log-likelihood slot
     if (debug) cat("add log_lik matrix (empty)\n")
-    add_slot("log_lik")
+    add_slot(sim, "log_lik")
     ## added_vars <- character(0)
 
     ## add data
@@ -111,7 +111,7 @@ mk_calibrate <- function(sim,
     for (p in setdiff(names(params), sim_vars)) {
         ## add params if not already in model
         if (debug) cat("add param (scalar placeholder value): ", p, "\n")
-        add_slot(p, 1.0)
+        add_slot(sim, p, 1.0)
     }
 
     ## add _sim analogues for state variables referred to in expressions;
@@ -124,7 +124,7 @@ mk_calibrate <- function(sim,
         for (v in intersect(all_vars, state_vars)) {
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
-            add_slot(ph, save_x = TRUE)
+            add_slot(sim, ph, save_x = TRUE)
             newexpr <- reformulate(v, response = ph)
             if (debug) cat("add ", deparse(newexpr), "\n")
             sim$insert$expressions(
