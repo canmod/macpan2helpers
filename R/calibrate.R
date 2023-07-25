@@ -18,6 +18,7 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 ##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations)
 ##' @param exprs a list of expressions to add
 ##' @param params a list of parameters with default/starting values
+##' @param clamp_vars (logical) force state variables to be positive in likelihood expression?
 ##' @export
 #' @examples
 #' ## it's convenient to have a function that sets up a fresh simulation
@@ -65,12 +66,15 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 ## * option to print and/or return the exact sequence of calls?
 ## * see hacks for getting simulation variables, state variables
 ## * modularize?
+##
+## FIXME: allow setting clamp tolerance?
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
                          data = NULL,
                          exprs = list(),
-                         debug = FALSE) {
+                         debug = FALSE,
+                         clamp_vars = FALSE) {
     ## how do I get these programmatically from sim?
     ## is there a better/easier way to get state names??
     ##  these are present in 'Compartmental' objects;
@@ -136,6 +140,13 @@ mk_calibrate <- function(sim,
             newsym <- parse(text=bind_var)[[1]]
             exprs[[i]] <- do.call(substitute,
                                   list(ee, setNames(list(newsym), v)))
+            ## substitute clamp(*_sim) [INSIDE] rbind_time()
+            if (clamp_vars) {
+                clamp_var <- sprintf("clamp(%s)", ph)
+                newsym <- parse(text=clamp_var)[[1]]
+                exprs[[i]] <- do.call(substitute,
+                                      list(exprs[[i]], setNames(list(newsym), ph)))
+            }
         }
         if (debug) cat("add ", deparse(exprs[[i]]), "\n")
         sim$insert$expressions(exprs[[i]], .phase = "after")

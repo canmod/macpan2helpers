@@ -10,7 +10,8 @@ mk_calibrate(
   transforms = list(),
   data = NULL,
   exprs = list(),
-  debug = FALSE
+  debug = FALSE,
+  clamp_vars = FALSE
 )
 }
 \arguments{
@@ -21,6 +22,8 @@ mk_calibrate(
 \item{data}{a data frame containing data to add (i.e., observed variables that will be compared with simulations)}
 
 \item{exprs}{a list of expressions to add}
+
+\item{clamp_vars}{(logical) force state variables to be positive in likelihood expression?}
 }
 \description{
 add calibration information to a simulatore
