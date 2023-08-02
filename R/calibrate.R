@@ -14,7 +14,7 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
     names(args)[1] <- x
     do.call(sim$add$matrices, args)
     argstr <- sprintf("sim$add$matrices(%s)",
-                      do.call(paste, c(argstr, list(collapse = ", "))))
+                      do.call(paste, c(list(unlist(argstr)), list(collapse = ", "))))
     return(invisible(argstr))
 }
 
@@ -125,7 +125,7 @@ mk_calibrate <- function(sim,
         for (nm in names(data)) {
             if (debug) cat(sprintf("add data matrix: %s\n", nm))
             do.call(sim$add$matrices, data[nm])
-            desc <- append(desc, sprintf("sim$add$matrices(%s[[%s]]", deparse(substitute(data)), nm))
+            desc <- append(desc, sprintf("sim$add$matrices(%s[['%s']]", deparse(substitute(data)), nm))
         }
     }
 
@@ -144,11 +144,14 @@ mk_calibrate <- function(sim,
         all_vars <- all.vars(ee)
         ## create a placeholder
         for (v in intersect(all_vars, state_vars)) {
+            browser()
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
             desc <- append(desc, add_slot(sim, ph, save_x = TRUE))
-            newexpr <- reformulate(v, response = ph)
+            newexpr <- reformulate(v, response = ph, env = emptyenv())
             if (debug) cat("add ", deparse(newexpr), "\n")
+            ## UGH! Error in as.function.default(c(value, if (is.null(bd) || is.list(bd)) list(bd) else bd),  : 
+            ## invalid formal argument list for "function"
             sim$insert$expressions(
                            newexpr,
                            .phase = "during",
