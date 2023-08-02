@@ -1,10 +1,21 @@
 add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FALSE) {
     args <- list()
-    if (save_x) args <- c(args, list(.mats_to_save = x))
-    if (return_x) args <- c(args, list(.mats_to_return = x))
-    args <- c(list(value), args)
+    argstr <- list()
+    if (save_x) {
+        args <- c(args, list(.mats_to_save = x))
+        argstr <- append(argstr, sprintf(".mats_to_save = %s", x))
+    }
+    if (return_x) {
+        args <- c(args, list(.mats_to_return = x))
+        argstr <- append(argstr, sprintf(".mats_to_return = %s", x))
+    }
+    args <- append(list(value), args, after = 0)
+    argstr <- append(argstr, sprintf("%s = %s", x, deparse(substitute(value))))
     names(args)[1] <- x
     do.call(sim$add$matrices, args)
+    argstr <- sprintf("sim$add$matrices(%s)",
+                      do.call(paste, c(argstr, list(collapse = ", "))))
+    return(invisible(argstr))
 }
 
 ## Note: example is failing with bf1de7f99
@@ -13,12 +24,13 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 ## but validity could not be checked because:
 ## Error in if (any(!valid_pars)) { : missing value where TRUE/FALSE needed
 
-##' add calibration information to a simulatore
+##' add calibration information to a simulator
 ##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
 ##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations)
 ##' @param exprs a list of expressions to add
 ##' @param params a list of parameters with default/starting values
 ##' @param clamp_vars (logical) force state variables to be positive in likelihood expression?
+##' @return This function modifies the simulator object **in place**. It also returns (invisibly) a character vector of the lower-level operations it performs.
 ##' @export
 #' @examples
 #' ## it's convenient to have a function that sets up a fresh simulation
@@ -81,6 +93,7 @@ mk_calibrate <- function(sim,
     ## easy to get with sim$labels$state().  Should they be carried along
     ## somehow?
 
+    desc <- list()
     sim_vars <- c("beta", "gamma")
     state_vars <- rownames(sim$print$model$data_arg()$mats[[1]])
 
@@ -91,8 +104,10 @@ mk_calibrate <- function(sim,
     cap <- function(s) paste0(toupper(substring(s, 1, 1)), substring(s, 2))
 
     ## add log-likelihood slot
-    if (debug) cat("add log_lik matrix (empty)\n")
-    add_slot(sim, "log_lik")
+    append(desc, "# add log_lik matrix (empty)")
+    append(desc, "# add log_lik matrix (empty)")
+
+    append(desc, add_slot(sim, "log_lik"))
     ## added_vars <- character(0)
 
     ## add data
@@ -100,14 +115,17 @@ mk_calibrate <- function(sim,
         if (!is.data.frame(data)) stop("'data' argument must be a data frame")
         ## FIXME: better accessor??
         cur_ts <- sim$ad_fun()$env$data$time_steps
+        ## FIXME: be more careful about number of time steps (take start time, end time into account)
         if (nrow(data) != cur_ts) {
             if (debug) cat(sprintf("resetting number of time steps (%d -> %d)\n",
                                    cur_ts, nrow(data)))
             sim$replace$time_steps(nrow(data))
+            desc <- append(desc, sprintf("sim$replace$time_steps(%d)", nrow(data)))
         }
         for (nm in names(data)) {
             if (debug) cat(sprintf("add data matrix: %s\n", nm))
             do.call(sim$add$matrices, data[nm])
+            desc <- append(desc, sprintf("sim$add$matrices(%s[[%s]]", deparse(substitute(data)), nm))
         }
     }
 
@@ -115,7 +133,7 @@ mk_calibrate <- function(sim,
     for (p in setdiff(names(params), sim_vars)) {
         ## add params if not already in model
         if (debug) cat("add param (scalar placeholder value): ", p, "\n")
-        add_slot(sim, p, 1.0)
+        desc <- append(desc, add_slot(sim, p, 1.0))
     }
 
     ## add _sim analogues for state variables referred to in expressions;
@@ -128,7 +146,7 @@ mk_calibrate <- function(sim,
         for (v in intersect(all_vars, state_vars)) {
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
-            add_slot(sim, ph, save_x = TRUE)
+            desc <- append(desc, add_slot(sim, ph, save_x = TRUE))
             newexpr <- reformulate(v, response = ph)
             if (debug) cat("add ", deparse(newexpr), "\n")
             sim$insert$expressions(
