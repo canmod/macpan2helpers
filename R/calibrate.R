@@ -24,9 +24,17 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 ## but validity could not be checked because:
 ## Error in if (any(!valid_pars)) { : missing value where TRUE/FALSE needed
 
-##' add calibration information to a simulator
+##' Add calibration information to a simulator
+##'
+##' ## To do/FIXME
+##'  * see hacks for getting simulation variables, state variables
+##' * modularize?
+##' * switch for enabling a differenced/incidence class (add a flow/accumulator var to model; add a differencing step)?
+##' * allow setting clamp tolerance? allow specified list of variables to clamp rather than all or nothing
 ##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
-##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations)
+##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations). If the data frame contains a column called "time" or "date" (any capitalization), it will be used
+##' @param start_time a time or date, overriding first time in data; set to 1 otherwise
+##' @param end_time a time or date, overriding last time in data; set to number of time steps otherwise
 ##' @param exprs a list of expressions to add
 ##' @param params a list of parameters with default/starting values
 ##' @param clamp_vars (logical) force state variables to be positive in likelihood expression?
@@ -70,16 +78,10 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 #'     data = data.frame(I_obs),
 #'     params = list(beta = 0.2, gamma = 0.05),
 #'     transforms = list(beta = "log", gamma = "log"),
-#'     exprs = list(log_lik ~ dpois(I_obs, I)),
+#'     exprs = list(log_lik ~ dpois(I_obs, I))
 #' )
 #' sim$optimize$nlminb()
 #' ## warning about NA/NaN function evaluation is probably harmless ...
-## FIXME: * allow data as list? possible different lengths?
-## * option to print and/or return the exact sequence of calls?
-## * see hacks for getting simulation variables, state variables
-## * modularize?
-##
-## FIXME: allow setting clamp tolerance?
 mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
@@ -106,20 +108,40 @@ mk_calibrate <- function(sim,
     cap <- function(s) paste0(toupper(substring(s, 1, 1)), substring(s, 2))
 
     ## add log-likelihood slot
-    append(desc, "# add log_lik matrix (empty)")
-    append(desc, "# add log_lik matrix (empty)")
+    ## add comments ???
+    desc <- append(desc, "# add log_lik matrix (empty)")
 
-    append(desc, add_slot(sim, "log_lik"))
+    desc <- append(desc, add_slot(sim, "log_lik"))
     ## added_vars <- character(0)
 
     ## add data
     if (!is.null(data)) {
+        data_sub <- deparse(substitute(data))
         if (!is.data.frame(data)) stop("'data' argument must be a data frame")
-        ## FIXME: check for time/date column in data frame
+        timecol <- grep("([Tt]ime|[Dd]ate)", names(data))
+        if (length(timecol) > 1) stop("multiple time/date columns detected")
+        if (length(timecol)==0 && (!is.null(start_time) || !is.null(end_time))) {
+            stop("if start_time or end_time are specified, data must include a time/date column")
+        }
+        if (length(timecol) > 0) {
+            timevec <- data[[timecol]]
+            if (length(unique(timevec))<length(timevec)) stop("time steps in data must be unique")
+            if (any(diff(timevec)<0)) stop("data must be sorted by time")
+            if (any(diff(timevec)<1)) stop("time steps must be equal to 1")
+            if (is.null(start_time)) start_time <- timevec[1]
+            if (is.null(end_time)) end_time <- tail(timevec, 1)
+            ts <- as.numeric(end_time-start_time) + 1 ## check on +1/edge effect issues?
+            ## generate time index that matches up with data frame
+            timevec <- as.integer(timevec - start_time + 1)
+            data <- data[, -timecol, drop = FALSE]
+        } else {
+            ts <- nrow(data)
+            timevec <- seq(ts)
+        }
+        irreg_time <- any(is.na(data)) || any(diff(timevec)>1)
         ## FIXME: better accessor??
         cur_ts <- sim$ad_fun()$env$data$time_steps
-        ## FIXME: be more careful about number of time steps (take start time, end time into account)
-        if (nrow(data) != cur_ts) {
+        if (ts != cur_ts) {
             if (debug) cat(sprintf("resetting number of time steps (%d -> %d)\n",
                                    cur_ts, nrow(data)))
             sim$replace$time_steps(nrow(data))
@@ -128,7 +150,7 @@ mk_calibrate <- function(sim,
         for (nm in names(data)) {
             if (debug) cat(sprintf("add data matrix: %s\n", nm))
             do.call(sim$add$matrices, data[nm])
-            desc <- append(desc, sprintf("sim$add$matrices(%s[['%s']]", deparse(substitute(data)), nm))
+            desc <- append(desc, sprintf("sim$add$matrices(%s[['%s']]", data_sub, nm))
         }
     }
 
@@ -146,6 +168,10 @@ mk_calibrate <- function(sim,
         if (debug) cat("process expression: ", deparse(ee), "\n")
         all_vars <- all.vars(ee)
         ## create a placeholder
+        ## FIXME: change logic to allow time indices for derived variables as well as state variables?
+        ## should have a separate loop that checks for 'specials' (dnorm, dpois, etc.) and uses those arguments
+        ## to match sim vs obs for time-index-matching
+        ## right now this *won't* work for the combination of derived variables (e.g. sum of hospital classes, incidences) + irregular time
         for (v in intersect(all_vars, state_vars)) {
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
@@ -157,7 +183,22 @@ mk_calibrate <- function(sim,
                            .phase = "during",
                            .at = Inf)
             desc <- append(desc, sprintf("sim$insert$expressions(%s, .phase = 'during', .at = Inf", deparse(newexpr)))
-            bind_var <- sprintf("rbind_time(%s)", ph)
+            if (irreg_time) {
+                ## could skip indices for any data elements that are regular?
+                ## need to match observed var with sim var explicitly
+                ## for now let's hope there's a one-to-one match between expressions in the state vector
+                ## and observed data ...
+                data_var <- intersect(all_vars, names(data))
+                t_ind <- timevec[!is.na(data[[data_var]])]
+                t_indnm <- paste0(v, "_tind")
+                do.call(sim$add$matrices, setNames(list(t_ind), t_indnm))
+                if (debug) cat(sprintf("add data matrix: %s", t_indnm))
+                desc <- append(desc, sprintf("%s <- %s", t_indnm, deparse(t_ind)))
+                desc <- append(desc, sprintf("sim$add$matrices(%s)", t_indnm))
+                bind_var <- sprintf("rbind_time(%s, %s)", ph, t_indnm)
+            } else {
+                bind_var <- sprintf("rbind_time(%s)", ph)
+            }
             ## convert to parsed expression, then get rid of expression()
             newsym <- parse(text=bind_var)[[1]]
             exprs[[i]] <- do.call(substitute,
@@ -195,7 +236,7 @@ mk_calibrate <- function(sim,
         if (debug) cat("add transformation: ", cap(tr)," ", nm, "\n")
         sim$add$transformations(get(cap(tr))(nm))
         ## does package checking complain about <<- ? could use assign(..., parent.frame())
-        desc <<- append(desc, sprintf("sim$add$transformations(%s(%s))", cap(tr), nm))
+        desc <<- append(desc, sprintf("sim$add$transformations(%s(\"%s\"))", cap(tr), nm))
     }
 
     ## add transformations

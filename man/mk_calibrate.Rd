@@ -2,7 +2,7 @@
 % Please edit documentation in R/calibrate.R
 \name{mk_calibrate}
 \alias{mk_calibrate}
-\title{add calibration information to a simulator}
+\title{Add calibration information to a simulator}
 \usage{
 mk_calibrate(
   sim,
@@ -21,7 +21,11 @@ mk_calibrate(
 
 \item{params}{a list of parameters with default/starting values}
 
-\item{data}{a data frame containing data to add (i.e., observed variables that will be compared with simulations)}
+\item{data}{a data frame containing data to add (i.e., observed variables that will be compared with simulations). If the data frame contains a column called "time" or "date" (any capitalization), it will be used}
+
+\item{start_time}{a time or date, overriding first time in data; set to 1 otherwise}
+
+\item{end_time}{a time or date, overriding last time in data; set to number of time steps otherwise}
 
 \item{exprs}{a list of expressions to add}
 
@@ -31,7 +35,14 @@ mk_calibrate(
 This function modifies the simulator object \strong{in place}. It also returns (invisibly) a character vector of the lower-level operations it performs.
 }
 \description{
-add calibration information to a simulator
+\subsection{To do/FIXME}{
+\itemize{
+\item see hacks for getting simulation variables, state variables
+\item modularize?
+\item switch for enabling a differenced/incidence class (add a flow/accumulator var to model; add a differencing step)?
+\item allow setting clamp tolerance? allow specified list of variables to clamp rather than all or nothing
+}
+}
 }
 \examples{
 ## it's convenient to have a function that sets up a fresh simulation
@@ -71,7 +82,7 @@ mk_calibrate(sim,
     data = data.frame(I_obs),
     params = list(beta = 0.2, gamma = 0.05),
     transforms = list(beta = "log", gamma = "log"),
-    exprs = list(log_lik ~ dpois(I_obs, I)),
+    exprs = list(log_lik ~ dpois(I_obs, I))
 )
 sim$optimize$nlminb()
 ## warning about NA/NaN function evaluation is probably harmless ...
