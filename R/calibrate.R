@@ -84,6 +84,8 @@ mk_calibrate <- function(sim,
                          params = list(),
                          transforms = list(),
                          data = NULL,
+                         start_time = NULL,
+                         end_time = NULL,
                          exprs = list(),
                          debug = FALSE,
                          clamp_vars = FALSE) {
@@ -113,6 +115,7 @@ mk_calibrate <- function(sim,
     ## add data
     if (!is.null(data)) {
         if (!is.data.frame(data)) stop("'data' argument must be a data frame")
+        ## FIXME: check for time/date column in data frame
         ## FIXME: better accessor??
         cur_ts <- sim$ad_fun()$env$data$time_steps
         ## FIXME: be more careful about number of time steps (take start time, end time into account)
@@ -180,6 +183,8 @@ mk_calibrate <- function(sim,
     pframe <- data.frame(mat = names(trp), row = 0, col = 0, default = unlist(trp))
     rownames(pframe) <- NULL ## cosmetic
 
+    desc <- append(desc, sprintf("pframe <- data.frame(mat = %s, row = 0, col = 0, default = %s)",
+                         deparse(names(trp)), deparse(unname(unlist(trp)))))
     if (debug) {
         cat("param_frame:\n")
         print(pframe)
@@ -189,7 +194,8 @@ mk_calibrate <- function(sim,
     add_trans <- function(tr, nm) {
         if (debug) cat("add transformation: ", cap(tr)," ", nm, "\n")
         sim$add$transformations(get(cap(tr))(nm))
-        desc <- append(desc, sprintf("sim$add$transformations(%s(%s))", cap(tr), nm))
+        ## does package checking complain about <<- ? could use assign(..., parent.frame())
+        desc <<- append(desc, sprintf("sim$add$transformations(%s(%s))", cap(tr), nm))
     }
 
     ## add transformations
@@ -197,7 +203,7 @@ mk_calibrate <- function(sim,
 
     ## now add param frame (does order matter??)
     sim$replace$params_frame(pframe)
-    desc <- append(desc, sprintf("sim$replace$params_frame(%s)", deparse(substitute(pframe))))
+    desc <- append(desc, sprintf("sim$replace$params_frame(pframe)"))
 
     if (debug) cat("set obj_fn to -sum(log_lik)\n")
     sim$replace$obj_fn(~ -sum(log_lik))

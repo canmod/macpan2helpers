@@ -2,13 +2,15 @@
 % Please edit documentation in R/calibrate.R
 \name{mk_calibrate}
 \alias{mk_calibrate}
-\title{add calibration information to a simulatore}
+\title{add calibration information to a simulator}
 \usage{
 mk_calibrate(
   sim,
   params = list(),
   transforms = list(),
   data = NULL,
+  start_time = NULL,
+  end_time = NULL,
   exprs = list(),
   debug = FALSE,
   clamp_vars = FALSE
@@ -25,8 +27,11 @@ mk_calibrate(
 
 \item{clamp_vars}{(logical) force state variables to be positive in likelihood expression?}
 }
+\value{
+This function modifies the simulator object \strong{in place}. It also returns (invisibly) a character vector of the lower-level operations it performs.
+}
 \description{
-add calibration information to a simulatore
+add calibration information to a simulator
 }
 \examples{
 ## it's convenient to have a function that sets up a fresh simulation
@@ -53,13 +58,13 @@ if (require(outbreaks)) {
     |> pull(obs)
   )
 }
-mk_calibrate(sim,
+m1 <- mk_calibrate(sim,
     data = data.frame(I_obs),
     params = list(beta = 0.2, I_sd = 1),
     transforms = list(beta = "log", I_sd = "log"),
     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
-    debug = TRUE
 )
+cat(m1, sep = "\n")
 sim$optimize$nlminb()
 sim <- setup_sim()  ## refresh
 mk_calibrate(sim,
