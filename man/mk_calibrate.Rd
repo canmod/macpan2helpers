@@ -41,6 +41,8 @@ This function modifies the simulator object \strong{in place}. It also returns (
 \item modularize?
 \item switch for enabling a differenced/incidence class (add a flow/accumulator var to model; add a differencing step)?
 \item allow setting clamp tolerance? allow specified list of variables to clamp rather than all or nothing
+\item rename and move into macpan2
+\item document that 'log-likelihood' means -1*(loss function) (e.g. for SSQ, chi-squared fits)
 }
 }
 }

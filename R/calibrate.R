@@ -31,6 +31,8 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 ##' * modularize?
 ##' * switch for enabling a differenced/incidence class (add a flow/accumulator var to model; add a differencing step)?
 ##' * allow setting clamp tolerance? allow specified list of variables to clamp rather than all or nothing
+##' * rename and move into macpan2
+##' * document that 'log-likelihood' means -1*(loss function) (e.g. for SSQ, chi-squared fits)
 ##' @param sim a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)
 ##' @param data a data frame containing data to add (i.e., observed variables that will be compared with simulations). If the data frame contains a column called "time" or "date" (any capitalization), it will be used
 ##' @param start_time a time or date, overriding first time in data; set to 1 otherwise
