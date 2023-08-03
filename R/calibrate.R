@@ -9,7 +9,7 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
         args <- c(args, list(.mats_to_return = x))
         argstr <- append(argstr, sprintf(".mats_to_return = %s", x))
     }
-    args <- append(list(value), args, after = 0)
+    args <- c(list(value), args)
     argstr <- append(argstr, sprintf("%s = %s", x, deparse(substitute(value))))
     names(args)[1] <- x
     do.call(sim$add$matrices, args)
@@ -57,13 +57,13 @@ add_slot <- function(sim, x, value = empty_matrix, save_x = FALSE, return_x = FA
 #'     |> pull(obs)
 #'   )
 #' }
-#' mk_calibrate(sim,
+#' m1 <- mk_calibrate(sim,
 #'     data = data.frame(I_obs),
 #'     params = list(beta = 0.2, I_sd = 1),
 #'     transforms = list(beta = "log", I_sd = "log"),
 #'     exprs = list(log_lik ~ dnorm(I_obs, I, I_sd)),
-#'     debug = TRUE
 #' )
+#' cat(m1, sep = "\n")
 #' sim$optimize$nlminb()
 #' sim <- setup_sim()  ## refresh
 #' mk_calibrate(sim,
@@ -144,18 +144,16 @@ mk_calibrate <- function(sim,
         all_vars <- all.vars(ee)
         ## create a placeholder
         for (v in intersect(all_vars, state_vars)) {
-            browser()
             ph <- paste0(v, "_sim")
             if (debug) cat("add (empty matrix): ", ph, "\n")
             desc <- append(desc, add_slot(sim, ph, save_x = TRUE))
             newexpr <- reformulate(v, response = ph, env = emptyenv())
             if (debug) cat("add ", deparse(newexpr), "\n")
-            ## UGH! Error in as.function.default(c(value, if (is.null(bd) || is.list(bd)) list(bd) else bd),  : 
-            ## invalid formal argument list for "function"
             sim$insert$expressions(
                            newexpr,
                            .phase = "during",
                            .at = Inf)
+            desc <- append(desc, sprintf("sim$insert$expressions(%s, .phase = 'during', .at = Inf", deparse(newexpr)))
             bind_var <- sprintf("rbind_time(%s)", ph)
             ## convert to parsed expression, then get rid of expression()
             newsym <- parse(text=bind_var)[[1]]
@@ -171,6 +169,7 @@ mk_calibrate <- function(sim,
         }
         if (debug) cat("add ", deparse(exprs[[i]]), "\n")
         sim$insert$expressions(exprs[[i]], .phase = "after")
+        desc <- append(desc, sprintf("sim$insert$expressions(%s, .phase = 'after', .at = Inf", deparse(exprs[[i]])))
     }
 
     ## modify names for transforms, apply transform to specified values
@@ -190,6 +189,7 @@ mk_calibrate <- function(sim,
     add_trans <- function(tr, nm) {
         if (debug) cat("add transformation: ", cap(tr)," ", nm, "\n")
         sim$add$transformations(get(cap(tr))(nm))
+        desc <- append(desc, sprintf("sim$add$transformations(%s(%s))", cap(tr), nm))
     }
 
     ## add transformations
@@ -197,14 +197,16 @@ mk_calibrate <- function(sim,
 
     ## now add param frame (does order matter??)
     sim$replace$params_frame(pframe)
+    desc <- append(desc, sprintf("sim$replace$params_frame(%s)", deparse(substitute(pframe))))
 
     if (debug) cat("set obj_fn to -sum(log_lik)\n")
     sim$replace$obj_fn(~ -sum(log_lik))
+    desc <- append(desc, "sim$replace$obj_fn(~ -sum(log_lik))")
     ## add transformations
     ## add parameters
     ## for now, assume all parameters are scalar?
 
     ## everything is done as a side effect (mutating state of sim)
-    return(NULL)
+    return(invisible(unlist(desc)))
 
 }
