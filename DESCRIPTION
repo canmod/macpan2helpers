@@ -1,6 +1,6 @@
 Package: macpan2helpers
 Title: `macpan2` Helper Functions
-Version: 0.0.2
+Version: 0.0.3
 Authors@R: c(
   person("Steve Walker", email="swalk@mcmaster.ca", role=c("cre", "aut")),
   person("Ben Bolker", rol="aut"),
