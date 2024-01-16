@@ -17,19 +17,23 @@ mk_calibrate(
 )
 }
 \arguments{
-\item{sim}{a \code{macpan2} simulator (i.e., a \code{TMBSimulator} object)}
+\item{sim}{A \code{macpan2} simulator (i.e., a \code{TMBSimulator} object).}
 
-\item{params}{a list of parameters with default/starting values}
+\item{params}{a list of parameters with default/starting values.}
 
-\item{data}{a data frame containing data to add (i.e., observed variables that will be compared with simulations). If the data frame contains a column called "time" or "date" (any capitalization), it will be used}
+\item{transforms}{TODO.}
 
-\item{start_time}{a time or date, overriding first time in data; set to 1 otherwise}
+\item{data}{A data frame containing data to add (i.e., observed variables that will be compared with simulations). If the data frame contains a column called "time" or "date" (any capitalization), it will be used.}
 
-\item{end_time}{a time or date, overriding last time in data; set to number of time steps otherwise}
+\item{start_time}{A time or date, overriding first time in data; set to 1 otherwise.}
 
-\item{exprs}{a list of expressions to add}
+\item{end_time}{A time or date, overriding last time in data; set to number of time steps otherwise.}
 
-\item{clamp_vars}{(logical) force state variables to be positive in likelihood expression?}
+\item{exprs}{A list of expressions to add.}
+
+\item{debug}{(logical) Print debugging information?}
+
+\item{clamp_vars}{(logical) Force state variables to be positive in likelihood expression?}
 }
 \value{
 This function modifies the simulator object \strong{in place}. It also returns (invisibly) a character vector of the lower-level operations it performs.

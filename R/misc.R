@@ -4,5 +4,5 @@
 ## from the package to make R CMD check happy (otherwise, we only use
 ## macpan2 functions in examples so far ...
 
-##' @importFrom macpan2 Compartmental
+##' @importFrom macpan2
 NULL
