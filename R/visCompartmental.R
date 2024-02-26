@@ -6,10 +6,11 @@
 #'
 #' @return A `visNetwork` object
 #'
-#' @export
 #' @examples
-#' sir <- macpan2::Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
-#' visCompartmental(sir)
+#' # example code
+#' # sir <- macpan2::Compartmental(system.file('starter_models', 'sir', package = 'macpan2'))
+#' # visCompartmental(sir)
+#' @export
 visCompartmental <- function(model, label_flows = FALSE, ...){
   nodes = node_data(model)
   edges = edge_data(model, label_flows = label_flows)

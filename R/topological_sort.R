@@ -9,9 +9,9 @@ has_inflow = function(focal_state, to_states, state_nms) {
 #' @param warn_not_dag Throw a warning if the model flows do not constitute
 #' a directed acyclic graph (DAG)?
 #'
-#' @export
 #' @returns Character vector giving the names of the state variables in
 #' topologically sorted order.
+#' @export
 topological_sort = function(model, warn_not_dag = TRUE) {
   topological_sort_engine(
     flows = model$flows_expanded(),

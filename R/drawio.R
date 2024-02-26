@@ -210,7 +210,7 @@ if (FALSE) {
   drawio_tables(list(data.frame(x = "$$\\lambda$$"), x = 0, y = 0), file_name = tmp_file)
   system2("open", c("-a", '"Visual Studio Code"', tmp_file))
   
-  sir_vax = Compartmental(system.file("starter_models", "sir_vax", package = "macpan2"))
+  #sir_vax = Compartmental(system.file("starter_models", "sir_vax", package = "macpan2"))
   drawio_tables(
     list(v$filter("state", .wrt = "Vec")$frame(), x = 0, y = 0),
     list(v$filter("flow", .wrt = "Vec")$frame(), x = 100, y = 100),
