@@ -2,7 +2,7 @@ Package: macpan2helpers
 Title: `macpan2` Helper Functions
 Version: 1.0.0
 Authors@R: c(
-  person("Steve Walker", email="swalk@mcmaster.ca", role=c("cre", "aut")),
+  person("Steve Walker", email="stevencarlislewalker@gmail.com", role=c("cre", "aut")),
   person("Ben Bolker", rol="aut"),
   person("Irena Papst", rol="ctb"))
 Description: Helper functions for the `macpan2` package.
